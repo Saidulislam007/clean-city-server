@@ -67,10 +67,29 @@ router.post("/", async (req, res) => {
 // GET issues by user email (private)
 router.get("/user/:email", async (req, res) => {
   try {
-    const issues = await Issue.find({ email: req.params.email }).sort({ date: -1 });
-    res.json(issues);
-  } catch (err) { res.status(500).json({ message: err.message }); }
+    const { page = 1, limit = 10 } = req.query; // default page 1, 10 items per page
+    const skip = (page - 1) * limit;
+
+    const issues = await Issue.find({ email: req.params.email })
+      .sort({ date: -1 })
+      .skip(parseInt(skip))
+      .limit(parseInt(limit));
+
+    // Optional: send total count for frontend pagination
+    const total = await Issue.countDocuments({ email: req.params.email });
+
+    res.json({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      totalPages: Math.ceil(total / limit),
+      issues,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
+
 
 // PUT update (protected)
 router.put("/:id", async (req, res) => {
